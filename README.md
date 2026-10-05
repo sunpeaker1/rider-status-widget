@@ -10,3 +10,5 @@
 - 상시 서비스 / 접근성 서비스 / WakeLock 없음
 - V0.2.0: 초기 시안에 맞춰 글자, 시간, 온도, 날씨, 폰 상태 카드 확대
 - Public 저장소의 표준 GitHub Actions로 무료 빌드
+
+빌드: Public 표준 runner 사용.
