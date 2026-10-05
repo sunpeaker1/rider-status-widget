@@ -1,0 +1,61 @@
+name: Build Rider Status Widget
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+concurrency:
+  group: rider-status-widget-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Source
+        uses: actions/checkout@v4
+
+      - name: Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Keep widget debug signing key
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: rider-status-widget-debug-signing-v1
+
+      - name: Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.10.2"
+
+      - name: Android SDK 35
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Build debug APK
+        run: gradle :app:assembleDebug --stacktrace
+
+      - name: Prepare APK
+        run: cp app/build/outputs/apk/debug/app-debug.apk RiderStatusWidget-V0.2.0-debug.apk
+
+      - name: Publish APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="test-rider-status-widget-v0.2.0"
+          gh release delete "$TAG" --cleanup-tag -y || true
+          gh release create "$TAG" RiderStatusWidget-V0.2.0-debug.apk \
+            --target "$GITHUB_SHA" \
+            --title "라이더짝꿍 위젯 V0.2.0" \
+            --notes "독립 홈 위젯. 글자·시간·온도·폰상태를 크게 확대하고 Public 표준 GitHub Actions로 무료 빌드한 버전입니다."
